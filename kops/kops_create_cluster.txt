@@ -1,0 +1,116 @@
+k8s
+
+###
+
+# obtaing the latest CoreOS image owner/name
+aws ec2 describe-images --region=us-east-1 --owner=595879546273 --filters "Name=virtualization-type,Values=hvm" "Name=name,Values=CoreOS-stable*" --query 'sort_by(Images,&CreationDate)[-1].{id:ImageLocation}' --output table
+
+export AWS_PROFILE=perfecto-dev
+export NAME="iliya-k8s.iliyahoo.tk"
+export KOPS_STATE_STORE="s3://iliya-kops-state-london"
+PERMIT_IP="109.66.79.179/32,212.150.120.194/32"
+
+kops create cluster --name $NAME --zones=us-east-1a,us-east-1b,us-east-1c --node-count=0 --node-size=m5.large --master-zones=us-east-1a,us-east-1b,us-east-1c --master-size=m5.large --dns-zone=iliyahoo.tk --networking canal --authorization=RBAC --topology private --admin-access ${PERMIT_IP} --ssh-access ${PERMIT_IP} --image <latest_CoreOS_image_owner/name>
+
+# adjust allowed IP to access over SSH/HTTPS
+kops edit cluster
+# edit kubernetesApiAccess and sshAccess
+kops update cluster # --yes
+
+# setup ec2 instance tags and spot price
+kops get ig
+kops edit ig master-us-east-1a
+kops edit ig nodes
+kops update cluster --yes
+
+### Dashboard
+
+# https://github.com/kubernetes/kops/blob/master/docs/addons.md
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v1.8.3/src/deploy/recommended/kubernetes-dashboard.yaml
+# get credentials
+kubectl config view --minify -o json | jq '.users[0].user | .username + ": " + .password'
+https://api.iliya-k8s.iliyahoo.tk/ui/
+
+# in case of RBAC
+# https://github.com/kubernetes/dashboard/wiki/Access-control
+
+cat <<EOF> dashboard-admin.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubernetes-dashboard
+  labels:
+    k8s-app: kubernetes-dashboard
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: kubernetes-dashboard
+  namespace: kube-system
+EOF
+
+kubectl apply -f dashboard-admin.yaml
+
+###
+
+# hello-minikube
+kubectl run hello-minikube --image=k8s.gcr.io/echoserver:1.4 --port=8080
+# expose hello-minikube
+kubectl expose deployment hello-minikube --type=NodePort
+kubectl get deployment hello-minikube
+# open the tcp port from command above on master SG
+# get api server from route53 and open the browser: http://<api-server>:<exposed-port>
+
+###
+
+# Volume
+aws ec2 create-volume --size 10 --region us-east-1 --availability-zone us-east-1a --volume-type gp2 --tag-specifications 'ResourceType=volume,Tags=[{Key=KubernetesCluster,Value=iliya-k8s.iliyahoo.tk}]'
+
+###
+
+# Use kops export command to get the kubecfg needed for running kubectl
+kops export kubecfg ${NAME}
+
+### Bastion
+
+kops create instancegroup bastion --role Bastion --subnet utility-us-east-1a,utility-us-east-1b,utility-us-east-1c
+
+create Route53 CNAME bastion.iliyahoo.tk that points to bastions' ELB
+
+ssh -A admin@bastion.iliyahoo.tk
+
+### Helm
+
+cat <<EOF> rbac-config.yaml
+---
+#https://github.com/kubernetes/helm/issues/3130
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tiller
+  namespace: kube-system
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: tiller-clusterrolebinding
+subjects:
+- kind: ServiceAccount
+  name: tiller
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: ""
+EOF
+
+kubectl create -f rbac-config.yaml
+helm init --service-account tiller
+
+# https://github.com/kubernetes/helm/issues/3409
+In case you get "Error: Transport is closing" message when attempting to install or uninstall a chart, update helm with a fixed version (helm v2.8.0 is affected):
+helm init --force-upgrade --tiller-image powerhome/tiller:git-3b22ecd --upgrade
+
+###

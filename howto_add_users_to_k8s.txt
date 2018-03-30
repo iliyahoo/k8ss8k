@@ -1,0 +1,55 @@
+https://docs.bitnami.com/kubernetes/how-to/configure-rbac-in-your-kubernetes-cluster/
+
+https://stackoverflow.com/questions/42170380/how-to-add-users-to-kubernetes-kubectl
+
+##################
+
+mkdir .certs && cd .certs
+
+openssl genrsa -out employee.key 2048
+
+openssl req -new -key employee.key -out employee.csr -subj "/CN=yaniv/O=evercompliant"
+
+aws --profile $AWS_PROFILE s3 cp $KOPS_STATE_STORE/$NAME/pki/private/ca/6520923975096416966656227330.key ca.key
+aws --profile $AWS_PROFILE s3 cp $KOPS_STATE_STORE/$NAME/pki/issued/ca/6520923975096416966656227330.crt ca.crt
+
+openssl x509 -req -in employee.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out employee.crt -days 10
+
+rm -f ca.* employee.csr
+
+kubectl config set-credentials yaniv --client-certificate=employee.crt --client-key=employee.key
+kubectl config set-context yaniv-context --cluster=$NAME --namespace=evercompliant --user=yaniv
+
+cat <<EOF> role-deployment-manager.yaml
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: evercompliant
+  name: deployment-manager
+rules:
+- apiGroups: ["", "extensions", "apps"]
+  resources: ["deployments", "replicasets", "pods", "configmaps"]
+  verbs: ["get", "list", "watch"]
+EOF
+
+kubectl apply -f role-deployment-manager.yaml
+
+cat <<EOF> rolebinding-deployment-manager.yaml
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: deployment-manager-binding
+  namespace: evercompliant
+subjects:
+- kind: User
+  name: yaniv
+  apiGroup: ""
+roleRef:
+  kind: Role
+  name: deployment-manager
+  apiGroup: ""
+EOF
+
+kubectl apply -f rolebinding-deployment-manager.yaml
+
+kubectl --namespace=evercompliant --context=yaniv-context get pods
