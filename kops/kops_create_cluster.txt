@@ -10,7 +10,7 @@ export NAME="iliya-k8s.iliyahoo.tk"
 export KOPS_STATE_STORE="s3://iliya-kops-state-london"
 PERMIT_IP="109.66.79.179/32,212.150.120.194/32"
 
-kops create cluster --name $NAME --zones=us-east-1a,us-east-1b,us-east-1c --node-count=0 --node-size=m5.large --master-zones=us-east-1a,us-east-1b,us-east-1c --master-size=m5.large --dns-zone=iliyahoo.tk --networking canal --authorization=RBAC --topology private --admin-access ${PERMIT_IP} --ssh-access ${PERMIT_IP} --image <latest_CoreOS_image_owner/name>
+kops create cluster --name $NAME --zones=us-east-1a,us-east-1b,us-east-1c --node-count=0 --node-size=m5.large --master-zones=us-east-1a,us-east-1b,us-east-1c --master-size=m5.large --dns-zone=iliyahoo.tk --networking canal --authorization=RBAC --topology private --admin-access ${PERMIT_IP} --ssh-access ${PERMIT_IP} --image <latest_CoreOS_image_owner/name> --dns-zone=k8ss8k.io --state $KOPS_STATE_STORE
 
 # adjust allowed IP to access over SSH/HTTPS
 kops edit cluster
@@ -71,7 +71,7 @@ aws ec2 create-volume --size 10 --region us-east-1 --availability-zone us-east-1
 ###
 
 # Use kops export command to get the kubecfg needed for running kubectl
-kops export kubecfg ${NAME}
+kops export kubecfg ${NAME} --state $KOPS_STATE_STORE
 
 ### Bastion
 

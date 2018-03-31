@@ -8,37 +8,25 @@ os.environ['PATH']
 
 
 def lambda_handler(event, context):
-    action = os.environ.get("action")
-    cluster_name = 'k8ss8k.io'
-    s3_bucket = 'k8ss8k-kops-state'
-    s3_key = "k8ss8k.io/instancegroup"
-    yes = "--yes"
+    try:
+        AWS_ACCESS_KEY_ID = event['AWS_ACCESS_KEY_ID'],
+        AWS_SECRET_ACCESS_KEY = event['AWS_SECRET_ACCESS_KEY'],
+    except:
+        pass
 
-    if (action == 'start') or (action == "stop"):
-        print("{}ing {}".format(action, cluster_name))
+    if (event['action'] == 'start') or (event['action'] == "stop"):
+        print("{}ing {}".format(event['action'], event['cluster_name']))
     else:
         sys.exit("start and stop actions are only alllowable")
 
-    # desired instance group capacity
-    capacity = {
-        'masters': (1, ),
-        'nodes': (1, 3),
-        'bastions': 0
-    }
-
-    try:
-        boto3.setup_default_session(profile_name=profile)
-    except:
-        boto3.setup_default_session()
-
+    boto3.setup_default_session()
     s3 = boto3.resource('s3')
-    bucket = s3.Bucket(s3_bucket)
+    bucket = s3.Bucket(event['s3_bucket'])
 
     # download file
-    for obj in bucket.objects.filter(Prefix=s3_key):
+    for obj in bucket.objects.filter(Prefix=event['s3_key']):
         file = obj.key.split('/')[-1]
         body = obj.get()['Body'].read()
-
         # change instance group capacity
         try:
             yml = yaml.load(body)
@@ -50,11 +38,11 @@ def lambda_handler(event, context):
             del(yml['metadata']['creationTimestamp'])
         except:
             pass
-        if action == 'start':
+        if event['action'] == 'start':
             if file.startswith('master-'):
-                group = capacity['masters']
+                group = event['capacity']['masters']
             elif file == 'nodes':
-                group = capacity['nodes']
+                group = event['capacity']['nodes']
             if len(group) == 1:
                 yml['spec']['maxSize'] = group[0]
                 yml['spec']['minSize'] = group[0]
@@ -62,7 +50,7 @@ def lambda_handler(event, context):
                 min, max = group
                 yml['spec']['maxSize'] = max
                 yml['spec']['minSize'] = min
-        elif action == 'stop':
+        elif event['action'] == 'stop':
             yml['spec']['maxSize'] = 0
             yml['spec']['minSize'] = 0
 
@@ -71,7 +59,7 @@ def lambda_handler(event, context):
         obj.put(Body=data)
 
     # update kops cluster
-    command = './kops update cluster --name {} --state s3://{} {}'.format(cluster_name, s3_bucket, yes)
+    command = './kops update cluster --name {} --state s3://{} {}'.format(event['cluster_name'], event['s3_bucket'], event['yes'])
     process = subprocess.Popen(command.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
 
@@ -83,6 +71,19 @@ def lambda_handler(event, context):
 
 
 if __name__ == '__main__':
-    profile = 'dima'
-    s = lambda_handler(None, None)
+    event = {
+        "action": "stop",
+        "yes": "",
+        "capacity": {
+            "masters": [1],
+            "nodes": [1, 3],
+            "bastions": [0]
+        },
+        "AWS_ACCESS_KEY_ID" = "XXXXXXXXXX",
+        "AWS_SECRET_ACCESS_KEY" = "XXXXXXXXXXXXXXXXXX",
+        "cluster_name": "k8ss8k.io",
+        "s3_bucket": "k8ss8k-kops-state",
+        "s3_key": "k8ss8k.io/instancegroup"
+    }
+    s = lambda_handler(event, None)
     print(s)
