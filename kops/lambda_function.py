@@ -75,12 +75,12 @@ if __name__ == '__main__':
         "action": "stop",
         "yes": "",
         "capacity": {
-            "masters": [1],
-            "nodes": [1, 3],
-            "bastions": [0]
+            "masters": (1, ),
+            "nodes": (1, 3),
+            "bastions": (0, )
         },
-        "AWS_ACCESS_KEY_ID" = "XXXXXXXXXX",
-        "AWS_SECRET_ACCESS_KEY" = "XXXXXXXXXXXXXXXXXX",
+        # "AWS_ACCESS_KEY_ID": "",
+        # "AWS_SECRET_ACCESS_KEY": "",
         "cluster_name": "k8ss8k.io",
         "s3_bucket": "k8ss8k-kops-state",
         "s3_key": "k8ss8k.io/instancegroup"
