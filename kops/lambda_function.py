@@ -77,7 +77,7 @@ if __name__ == '__main__':
         "capacity": {
             "masters": (1, ),
             "nodes": (1, 3),
-            "bastions": (0, )
+            "bastion": (0, )
         },
         # "AWS_ACCESS_KEY_ID": "",
         # "AWS_SECRET_ACCESS_KEY": "",
