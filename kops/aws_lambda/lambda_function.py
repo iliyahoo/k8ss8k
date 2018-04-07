@@ -43,6 +43,10 @@ def lambda_handler(event, context):
                 group = event['capacity']['masters']
             elif file == 'nodes':
                 group = event['capacity']['nodes']
+            elif file == 'bastion':
+                group = event['capacity']['bastion']
+            else:
+                continue
             if len(group) == 1:
                 yml['spec']['maxSize'] = group[0]
                 yml['spec']['minSize'] = group[0]
@@ -72,11 +76,11 @@ def lambda_handler(event, context):
 
 if __name__ == '__main__':
     event = {
-        "action": "stop",
+        "action": "start",
         "yes": "",
         "capacity": {
             "masters": (1, ),
-            "nodes": (1, 3),
+            "nodes": (0, 3),
             "bastion": (0, )
         },
         # "AWS_ACCESS_KEY_ID": "",
