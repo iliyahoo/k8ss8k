@@ -4,6 +4,6 @@ metadata:
   name: standard
 parameters:
   type: gp2
-  zones: eu-west-1a, eu-west-1b, eu-west-1c
+  zones: us-east-1c
 provisioner: kubernetes.io/aws-ebs
 reclaimPolicy: Retain

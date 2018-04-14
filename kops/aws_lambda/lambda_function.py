@@ -77,10 +77,10 @@ def lambda_handler(event, context):
 if __name__ == '__main__':
     event = {
         "action": "start",
-        "yes": "",
+        "yes": "--yes",
         "capacity": {
             "masters": (1, ),
-            "nodes": (0, 3),
+            "nodes": (1, 5),
             "bastion": (0, )
         },
         # "AWS_ACCESS_KEY_ID": "",

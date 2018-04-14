@@ -3,14 +3,14 @@ k8s
 ###
 
 # obtaing the latest CoreOS image owner/name
-aws ec2 describe-images --region=us-east-1 --owner=595879546273 --filters "Name=virtualization-type,Values=hvm" "Name=name,Values=CoreOS-stable*" --query 'sort_by(Images,&CreationDate)[-1].{id:ImageLocation}' --output table
+coreos_image=`aws ec2 describe-images --region=us-east-1 --owner=595879546273 --filters "Name=virtualization-type,Values=hvm" "Name=name,Values=CoreOS-stable*" --query 'sort_by(Images,&CreationDate)[-1].{id:ImageLocation}' | jq '.id' | tr -d '"'`
 
-export AWS_PROFILE=perfecto-dev
-export NAME="iliya-k8s.iliyahoo.tk"
-export KOPS_STATE_STORE="s3://iliya-kops-state-london"
-PERMIT_IP="109.66.79.179/32,212.150.120.194/32"
+export AWS_PROFILE=dima
+export NAME="k8ss8k.io"
+export KOPS_STATE_STORE="s3://k8ss8k-kops-state"
+PERMIT_IP="109.67.111.120/32,212.150.120.194/32,84.109.109.177/32"
 
-kops create cluster --name $NAME --zones=us-east-1a,us-east-1b,us-east-1c --node-count=0 --node-size=m5.large --master-zones=us-east-1a,us-east-1b,us-east-1c --master-size=m5.large --dns-zone=iliyahoo.tk --networking canal --authorization=RBAC --topology private --admin-access ${PERMIT_IP} --ssh-access ${PERMIT_IP} --image <latest_CoreOS_image_owner/name> --dns-zone=k8ss8k.io --state $KOPS_STATE_STORE
+kops create cluster --name $NAME --zones=us-east-1c --node-count=1 --node-size=m5.large --master-zones=us-east-1a,us-east-1b,us-east-1c --master-size=t2.medium --networking canal --authorization=RBAC --topology public --admin-access ${PERMIT_IP} --ssh-access ${PERMIT_IP} --image "${coreos_image}" --dns-zone="${NAME}" --state $KOPS_STATE_STORE
 
 # adjust allowed IP to access over SSH/HTTPS
 kops edit cluster
@@ -29,7 +29,7 @@ kops update cluster --yes
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v1.8.3/src/deploy/recommended/kubernetes-dashboard.yaml
 # get credentials
 kubectl config view --minify -o json | jq '.users[0].user | .username + ": " + .password'
-https://api.iliya-k8s.iliyahoo.tk/ui/
+https://api.k8ss8k.io/ui/
 
 # in case of RBAC
 # https://github.com/kubernetes/dashboard/wiki/Access-control
@@ -66,7 +66,7 @@ kubectl get deployment hello-minikube
 ###
 
 # Volume
-aws ec2 create-volume --size 10 --region us-east-1 --availability-zone us-east-1a --volume-type gp2 --tag-specifications 'ResourceType=volume,Tags=[{Key=KubernetesCluster,Value=iliya-k8s.iliyahoo.tk}]'
+aws ec2 create-volume --size 10 --region us-east-1 --availability-zone us-east-1a --volume-type gp2 --tag-specifications 'ResourceType=volume,Tags=[{Key=KubernetesCluster,Value=k8ss8k.io}]'
 
 ###
 

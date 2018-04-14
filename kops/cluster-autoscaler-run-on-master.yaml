@@ -126,7 +126,7 @@ spec:
       nodeSelector:
         kubernetes.io/role: master
       containers:
-        - image: gcr.io/google_containers/cluster-autoscaler:v1.2.0
+        - image: gcr.io/google_containers/cluster-autoscaler:v1.2.1
           name: cluster-autoscaler
           resources:
             limits:
@@ -141,10 +141,10 @@ spec:
             - --stderrthreshold=info
             - --cloud-provider=aws
             - --skip-nodes-with-local-storage=false
-            - --nodes=1:3:nodes.k8ss8k.io
+            - --nodes=1:5:nodes.k8ss8k.io
           env:
             - name: AWS_REGION
-              value: eu-west-1
+              value: us-east-1
           volumeMounts:
             - name: ssl-certs
               mountPath: /etc/ssl/certs/ca-certificates.crt

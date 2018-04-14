@@ -9,9 +9,9 @@ spec:
     lifetime: "-1"
     owner: iliya
     project: web
-  image: 595879546273/CoreOS-stable-1632.3.0-hvm
-  machineType: m5.large
-  maxPrice: "0.096"
+  image: 595879546273/CoreOS-stable-1688.5.3-hvm
+  machineType: t2.medium
+  maxPrice: "0.107"
   maxSize: 1
   minSize: 1
   nodeLabels:
