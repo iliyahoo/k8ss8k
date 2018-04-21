@@ -1,2 +1,3 @@
 kops/*.zip
-
+kops/aws_lambda/
+!kops/aws_lambda/lambda_function.py

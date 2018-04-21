@@ -113,4 +113,12 @@ helm init --service-account tiller
 In case you get "Error: Transport is closing" message when attempting to install or uninstall a chart, update helm with a fixed version (helm v2.8.0 is affected):
 helm init --force-upgrade --tiller-image powerhome/tiller:git-3b22ecd --upgrade
 
-###
+### API
+
+# get API token
+export token=`kops get secrets --type secret admin -oplaintext 2>/dev/null`
+
+# get API token of the user: "system:serviceaccount:default:default"
+export token=`kubectl describe secret default-token-msqcx | awk '/token:/ {print $2}'`
+
+curl -k --header "Authorization: Bearer $token" https://api.k8ss8k.io/apis/
